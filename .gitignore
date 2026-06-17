@@ -23,6 +23,10 @@ lerna-debug.log*
 .DS_Store
 Thumbs.db
 
+# next.js
+/.next/
+/out/
+
 # Editor
 .vscode/
 .idea/
@@ -38,6 +42,9 @@ coverage/
 .npm/
 .eslintcache
 package-lock.json
+
+# Pagefind
+/public/_pagefind/
 
 # Temporary
 tmp/
