@@ -8,7 +8,7 @@ import { createInterface } from "node:readline";
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const SRC = join(ROOT, "..", "docs", "philosophy");
-const VERSION = "1.3.3";
+const VERSION = "1.3.4";
 
 const useColor = stdout.isTTY && !process.env.NO_COLOR;
 const R = "\x1b[0m";
