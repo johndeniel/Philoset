@@ -9,5 +9,9 @@ export default {
       breadcrumb: false
     }
   },
-  philosophy: 'Philosophy'
+  backend: 'Backend',
+  frontend: 'Frontend',
+  rbac: 'RBAC',
+  database: 'Database',
+  ventra: 'Ventra'
 }
