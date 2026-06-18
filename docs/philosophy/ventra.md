@@ -1,0 +1,112 @@
+<div align="center">
+
+### Ventra Platform Architecture
+
+[![Documentation](https://img.shields.io/badge/docs-architecture-blue)](.)
+[![Domain](https://img.shields.io/badge/domain-Platform-purple)](.)
+[![Status](https://img.shields.io/badge/status-stable-brightgreen)](.)
+
+Modular Monolith, Domain-Driven Design, CQRS, and Event-Driven Architecture.
+
+</div>
+
+## Overview
+
+Ventra is a multi-tenant platform enabling service businesses—restaurants, bars, and entertainment venues—to deliver frictionless QR-based ordering experiences. Customers scan a QR code at their station, browse the catalog, place orders, and complete payments without requiring staff involvement in the ordering flow.
+
+The system is implemented as a **modular monolith**, where each bounded context is internally isolated with clear dependency boundaries. This approach maximizes development velocity while preserving a clear and low-risk path toward future microservice extraction.
+
+
+### Core Principles
+
+- **Domain Ownership** — Each bounded context owns its data exclusively
+- **Event-Driven Communication** — Domains communicate through events, never direct calls
+- **Multi-Tenant Isolation** — Enforced at the database level via Row-Level Security (RLS)
+
+
+## Business Domains
+
+```
+╔═══════════════════════════════════════════════════════════════════════════════════╗
+║                                   PLATFORM                                        ║
+║                                                                                   ║
+║  ┌──────────────┐   ┌──────────────┐   ┌──────────────┐   ┌──────────────┐        ║
+║  │     Auth     │───│   Accounts   │───│ Organization │───│ Subscription │        ║    
+║  └──────────────┘   └──────────────┘   └──────────────┘   └──────────────┘        ║
+║                                                                                   ║
+╚═══════════════════════════════════════════════════════════════════════════════════╝
+                                         │
+               ┌─────────────┬───────────┼───────────┬─────────────┐
+               │             │           │           │             │
+               ▼             ▼           ▼           ▼             ▼
+         ┌──────────┐  ┌──────────┐┌──────────┐┌──────────┐┌──────────┐
+         │ CATALOG  │  │  TABLE   ││  ORDERS  ││   POS    ││ KITCHEN  │
+         └──────────┘  └──────────┘└──────────┘└──────────┘└──────────┘
+               │                        │           │
+               └────────────────────────┴─────┬─────┘
+                                              │
+                                              ▼
+                                      ┌──────────────┐
+                                      │   REPORTS    │
+                                      └──────────────┘
+```
+
+### Platform Layer
+
+- **Auth** — Authentication (identity verification), session lifecycle, and token management
+- **Accounts** — User and staff account management, profile data, and account lifecycle
+- **Organization** — Organization Name, brand etc.
+- **Subscription** — Billing plans, usage metering, invoicing, and payment lifecycle management
+
+### Operations Layer
+
+- **Catalog** — Product definitions, categorization, pricing strategies, and availability constraints
+- **Table** — Physical locations, station configuration, and QR code lifecycle management
+- **Orders** — Order creation, state transitions, and lifecycle orchestration
+- **Kitchen** — Work queue coordination, preparation tracking, and operational flow
+- **POS** — Payment execution, transaction records, and station-level billing
+- **Reports** — Aggregated analytics, performance metrics, and operational insights
+
+---
+
+### Infrastructure
+
+- **Runtime** — Next.js 16 deployed on Vercel
+- **Database** — Supabase PostgreSQL with schema-level domain isolation and Row-Level Security
+- **Real-time** — Supabase Realtime for event propagation and state synchronization
+- **Payments** — Stripe for subscription billing only; POS handles customer cash payments directly
+
+---
+
+### Database Architecture
+
+Ventra uses a **domain-isolated PostgreSQL design** where each bounded context owns its schema and data lifecycle. Cross-domain foreign keys and joins are intentionally prohibited to enforce loose coupling and service autonomy. Multi-tenancy is enforced via **Row-Level Security (RLS)** using `organization_id` as the isolation boundary, ensuring secure tenant-level data access across all domains.
+
+---
+
+### Event-Driven Architecture
+
+All inter-domain communication is performed through asynchronous domain events. Direct inter-module calls are explicitly disallowed, ensuring loose coupling, clear ownership boundaries, and a seamless transition path to independent microservices.
+
+Each event involves two sides:
+
+- **Publisher** — a bounded context that emits a domain event when its internal state changes. The Orders module publishes `order.placed`; it has no knowledge of what other modules exist or react to it.
+- **Subscriber** — a bounded context that listens for events from other modules and acts within its own boundary. Kitchen subscribes to `order.placed` and reacts independently, with no direct coupling to Orders.
+- **Query** — a message that reads data from a module without changing anything (e.g. `GetActiveOrdersForTable`). Each module exposes its own read model, keeping it decoupled from other modules' internal data.
+- **Command** — a message sent to a specific module with the intent to change state (e.g. `PlaceOrder`, `CancelOrder`). One module sends it; one handler processes it. It either succeeds and triggers an event, or fails and is rejected.
+- **Aggregate** — the root object inside a bounded context that enforces business rules and controls state changes. Nothing inside the Orders module changes state without going through the `Order` aggregate, which ensures data is always valid before an event is emitted.
+
+---
+
+### CQRS Pattern
+
+The platform strictly separates command (write) and query (read) responsibilities, enabling scalable write models and optimized, denormalized read projections tailored for client consumption.
+
+---
+
+### Design Principles
+
+- **Asynchronous by Default** — All inter-domain workflows are non-blocking
+- **Eventual Consistency** — Domains converge through events without distributed transactions
+- **Idempotent Processing** — Events carry correlation identifiers to prevent duplicate handling
+- **Tenant-Aware Messaging** — All events include `organization_id` for secure routing and isolation
