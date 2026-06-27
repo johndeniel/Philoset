@@ -1,0 +1,212 @@
+### 1. HTTP Methods
+
+APIs **MUST** use HTTP methods according to their intended semantics as defined in RFC 7231.
+
+| Method   | CRUD Operation      | Safe | Idempotent | Use Case |
+|----------|---------------------|------|------------|----------|
+| **GET**  | Read                | Yes  | Yes        | Retrieve a resource or collection. Must not modify server state. |
+| **POST** | Create              | No   | No         | Create a new resource or trigger an action. |
+| **PUT**  | Update / Create     | No   | Yes        | Replace an entire resource with the request payload. |
+| **PATCH**| Partial Update      | No   | No*        | Apply partial modifications to a resource. |
+| **DELETE**| Delete             | No   | Yes        | Remove a resource. |
+| **HEAD** | Read (metadata)     | Yes  | Yes        | Retrieve response headers only. |
+| **OPTIONS** | N/A              | Yes  | Yes        | Describe communication options (e.g., CORS preflight). |
+
+<br />
+
+### 2. Resource Naming
+
+- **Use plural nouns** for resource collections (e.g., `/users`, `/orders`).
+- **Express relationships** using hierarchical paths (e.g., `/users/{userId}/orders`).
+- **Avoid verbs** in URIs. Use HTTP methods to express actions.
+- **Lowercase only** with hyphens (`-`) as word separators (e.g., `/order-items`).
+- **Never** use underscores (`_`), spaces, or file extensions (`.json`, `.xml`, etc.).
+
+<br />
+
+### 3. URI Design
+
+- **Base Path**: All APIs MUST be served under `/api/{version}/` (e.g., `/api/v1/`).
+- **Path Parameters**: Use for unique resource identifiers (e.g., `/users/{userId}`). Use camelCase for parameter names.
+- **Trailing Slashes**: **Prohibited**. `/users` is valid; `/users/` is not.
+- **Hierarchy Depth**: Limit to a maximum of 3 levels.
+- **Query Parameters**: Use only for searching, filtering, sorting, pagination, or non-CRUD actions. Resource identification MUST use path segments.
+
+<br />
+
+### 4. HTTP Status Codes
+
+- `200 OK` — Successful GET, PUT, PATCH, or DELETE
+- `201 Created` — Successful POST (MUST include `Location` header)
+- `202 Accepted` — Request accepted for asynchronous processing
+- `204 No Content` — Successful request with no response body
+
+
+- `301 Moved Permanently`
+- `304 Not Modified` (with ETags / conditional requests)
+- `400 Bad Request` — Malformed request or validation errors
+- `401 Unauthorized` — Authentication required
+- `403 Forbidden` — Insufficient permissions
+- `404 Not Found` — Resource not found
+- `409 Conflict` — Resource conflict (e.g., duplicate)
+- `422 Unprocessable Entity` — Semantic validation failure
+- `429 Too Many Requests` — Rate limit exceeded
+- `500 Internal Server Error`
+- `502 Bad Gateway`
+- `503 Service Unavailable`
+
+<br />
+
+### 5. Idempotency
+
+- `GET`, `PUT`, `DELETE`, and `HEAD` **MUST** be idempotent.
+- `POST` is non-idempotent by nature. To safely retry requests, use **Idempotency Keys**:
+  - Clients send a unique `Idempotency-Key` header (UUID).
+  - Server stores the key + response for 24 hours.
+  - Subsequent identical requests return the cached response.
+
+<br />
+
+### 6. Error Handling
+
+All errors MUST follow this consistent JSON structure:
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_FAILED",
+    "message": "The request payload is invalid.",
+    "details": [
+      {
+        "field": "email",
+        "issue": "Must be a valid email address."
+      }
+    ],
+    "traceId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+  }
+}
+```
+
+- `code`: Machine-readable UPPER_SNAKE_CASE identifier
+- `message`: Human-readable description
+- `details`: Optional field-level error breakdown
+- `traceId`: For correlating with server logs
+
+<br />
+
+### 7. Request Validation
+
+- Return `400 Bad Request` for malformed syntax.
+- Return `422 Unprocessable Entity` for valid syntax that violates business rules.
+- Enforce strict typing and required fields.
+- Always sanitize and trim input to prevent injection attacks.
+
+<br />
+
+### 8. API Versioning
+
+- Use **URI versioning**: `/api/v1/`, `/api/v2/`, etc.
+- Minor changes (new optional fields, new endpoints) do not require version bumps.
+- **Deprecation**: Use the `Sunset` header and maintain deprecated versions for a minimum of 12 months.
+
+<br />
+
+### 9. Pagination
+
+Collection endpoints MUST support pagination. **Cursor-based pagination is preferred**.
+
+**Cursor-based:**
+- Request: `?limit=20&cursor=abc123`
+- Response includes `next_cursor` and `has_more`
+
+**Offset/Limit (acceptable for small datasets):**
+- Request: `?limit=20&offset=40`
+
+<br />
+
+### 10. Searching
+
+- Use the `q` parameter for full-text search: `?q=cloud computing`
+- Search SHOULD be case-insensitive.
+- Support basic boolean logic when backed by a capable search engine.
+
+<br />
+
+### 11. Filtering
+
+- Exact match: `?status=active`
+- Multiple values: `?status=active,pending`
+- Relational operators: `?created_at[gt]=2023-01-01`, `?price[lte]=100.00`
+
+<br />
+
+
+### 12. Sorting
+
+- Parameter: `sort`
+- Ascending: `?sort=createdAt`
+- Descending: `?sort=-createdAt`
+- Multiple fields: `?sort=-createdAt,lastName`
+
+<br />
+
+### 13. Query Parameter
+
+- Use `camelCase` for all query parameters.
+- Reserved parameters: `limit`, `offset`, `cursor`, `sort`, `q`, `fields`
+- Support **sparse fieldsets**: `?fields=id,firstName,email`
+- Booleans: Use lowercase strings `true` / `false`
+
+<br />
+
+### 14. Request Format
+- Content-Type: application/json for all payload-bearing requests (POST, PUT, PATCH)
+- JSON keys MUST use camelCase
+- All timestamps MUST be ISO 8601 in UTC (e.g., 2023-10-25T14:30:00Z)
+- Do NOT wrap request payloads in a top-level `data` field (send the raw resource object directly)
+- Omit optional fields if they are not being set or modified; to explicitly clear an existing optional field, pass `null`
+- Omit server-generated fields (e.g., `id`, `createdAt`, `updatedAt`) from request payloads
+
+<br />
+
+### 15. Response Format
+
+- Content-Type: `application/json`
+- JSON keys MUST use `camelCase`
+- All timestamps MUST be ISO 8601 in UTC (e.g., `2023-10-25T14:30:00Z`)
+- Wrap collection and single resource responses in a top-level `data` field
+- Return `null` for missing optional fields (do not omit unless irrelevant)
+
+<br />
+
+### 16. Content Negotiation
+
+- Respect the `Accept` header. Return `406 Not Acceptable` if unsupported.
+- Support gzip compression via `Accept-Encoding`.
+- Optional support for `Accept-Language` for internationalization.
+
+<br />
+
+### 17. Rate Limiting
+
+All public APIs MUST implement rate limiting.
+
+Responses MUST include:
+- `X-RateLimit-Limit`
+- `X-RateLimit-Remaining`
+- `X-RateLimit-Reset`
+
+Exceeding the limit returns `429 Too Many Requests` with a `Retry-After` header.
+
+<br />
+
+### 18. API Documentation
+
+All APIs **MUST** be documented using **OpenAPI Specification 3.1+**.
+
+- The OpenAPI YAML/JSON file is the single source of truth.
+- Every endpoint must include:
+  - `summary` and `description`
+  - Full parameter and request body schemas
+  - Complete response schemas with examples (success + error cases)
+- Interactive documentation (Swagger UI / Redoc) MUST be publicly available and automatically updated on deployment.

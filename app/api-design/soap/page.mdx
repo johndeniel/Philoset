@@ -1,0 +1,227 @@
+### 1. Message Structure
+
+SOAP APIs **MUST** use the SOAP 1.2 protocol. Messages **MUST** be XML documents structured according to the SOAP specification.
+
+- **Envelope**: Every message **MUST** contain a root `<soap:Envelope>` element.
+- **Header**: Optional. If present, **MUST** contain `<soap:Header>`. Used for metadata, authentication, and routing. Body contents **MUST NOT** be used for metadata.
+- **Body**: **MUST** contain exactly one `<soap:Body>` element as a child of the envelope. Contains the actual payload intended for the recipient.
+
+<br />
+
+### 2. Naming Conventions
+
+- **XML Elements**: Use `PascalCase` for all XML elements representing operations, entities, and fields (e.g., `<CreateUser>`, `<UserId>`).
+- **XML Attributes**: Use `camelCase` for XML attributes (e.g., `id="123"`, `isActive="true"`).
+- **WSDL/XSD Types**: Use `PascalCase` for complex types and simple types (e.g., `UserType`, `OrderStatus`).
+- **Enumerations**: Use `UPPER_SNAKE_CASE` for enumeration values (e.g., `<Status>PENDING_PAYMENT</Status>`).
+
+<br />
+
+### 3. WSDL Design
+
+All SOAP APIs **MUST** be described by a machine-readable WSDL (Web Services Description Language) 1.1 or 2.0 file.
+
+- **Style**: APIs **MUST** use the `Document/Literal Wrapped` binding style for maximum interoperability and clarity.
+- **Single File**: The WSDL **SHOULD** be a single comprehensive file or use standard `<wsdl:import>` and `<xsd:import>` for modular schemas.
+- **Target Namespace**: Define a clear target namespace (e.g., `http://api.example.com/v1`).
+- **Operations**: Operation names **MUST** clearly describe the action (e.g., `CreateUser`, `GetOrderDetails`).
+
+<br />
+
+### 4. HTTP Transport
+
+SOAP messages are typically transported over HTTP. HTTP semantics apply to the transport layer, while the SOAP envelope handles the application layer.
+
+- **Method**: All SOAP requests **MUST** be sent using HTTP `POST`.
+- **Content-Type**: Requests and responses **MUST** use `application/soap+xml; charset=utf-8` (SOAP 1.2).
+- **Status Codes**: 
+  - `200 OK` — Successful SOAP response, OR a SOAP Fault (application-level error).
+  - `400 Bad Request` — Malformed XML or unparseable HTTP request.
+  - `415 Unsupported Media Type` — Incorrect Content-Type header.
+  - `500 Internal Server Error` — **MUST NOT** be used for SOAP Faults if the HTTP transport succeeded; SOAP Faults return `200 OK`. `500` is reserved for actual web server failures.
+
+<br />
+
+### 5. Idempotency
+
+SOAP operations are not inherently idempotent. To safely retry requests (e.g., network timeouts), use **Idempotency Keys**:
+
+- Clients **MUST** send a unique `<Idempotency-Key>` element within the `<soap:Header>`.
+- Server stores the key + response for 24 hours.
+- Subsequent identical requests with the same key return the cached response.
+- Read operations (e.g., `GetUser`) are inherently idempotent and do not require keys.
+
+<br />
+
+### 6. Error Handling
+
+Application and business logic errors **MUST** be returned as SOAP Faults within the `<soap:Body>`. 
+
+```xml
+<soap:Fault>
+  <faultcode>soap:Sender</faultcode>
+  <faultstring>Validation failed for field 'email'.</faultstring>
+  <detail>
+    <ErrorCode>VALIDATION_FAILED</ErrorCode>
+    <TraceId>a1b2c3d4-e5f6-7890-abcd-ef1234567890</TraceId>
+    <InvalidField>email</InvalidField>
+  </detail>
+</soap:Fault>
+```
+
+- `faultcode`: **MUST** be `soap:Sender` (client error) or `soap:Receiver` (server error).
+- `faultstring`: Human-readable description of the error.
+- `detail`: **MUST** contain application-specific error codes (`<ErrorCode>`) in `UPPER_SNAKE_CASE`, a `<TraceId>`, and field-specific details if applicable.
+
+<br />
+
+### 7. Schema Validation
+
+- All request and response payloads **MUST** be strictly validated against the XSD (XML Schema Definition) defined in the WSDL.
+- Return a SOAP Fault with `<ErrorCode>SCHEMA_VALIDATION_FAILED</ErrorCode>` if the incoming XML does not match the schema.
+- Use strict XSD types (e.g., `xs:string`, `xs:integer`, `xs:dateTime`) rather than generic strings where possible.
+- Always sanitize and escape XML input to prevent XXE (XML External Entity) and injection attacks.
+
+<br />
+
+### 8. API Versioning
+
+SOAP APIs **MUST** use namespace-based versioning, not URI versioning.
+
+- **Versioning via Namespace**: Increment the version in the XML namespace URI (e.g., `http://api.example.com/v1` vs `http://api.example.com/v2`).
+- **Coexistence**: Different versions **MAY** be served from the same endpoint, distinguished by the SOAP Action or namespace.
+- **Deprecation**: Maintain deprecated namespaces for a minimum of 12 months. Include a `<Deprecated>true</Deprecated>` flag in the SOAP Header for operations pending removal.
+
+<br />
+
+### 9. Pagination
+
+List operations **MUST** support pagination via request and response elements.
+
+**Request Elements:**
+- `<Limit>`: Maximum number of records to return.
+- `<Cursor>`: Opaque string pointing to the next page.
+
+**Response Elements:**
+- `<HasMore>`: Boolean indicating if more records exist.
+- `<NextCursor>`: String to be used in the subsequent request.
+
+<br />
+
+### 10. Searching
+
+- Top-level search operations (e.g., `SearchCatalog`) **MUST** accept a `<Query>` element containing the search string.
+- Search **SHOULD** be case-insensitive.
+- Support basic boolean logic using `<Include>` and `<Exclude>` child elements when backed by a capable search engine.
+
+<br />
+
+### 11. Filtering
+
+- Use a dedicated `<Filter>` complex type in the request payload rather than individual scattered elements.
+- **Exact match**: `<Status>active</Status>`
+- **Multiple values**: `<Statuses><Status>active</Status><Status>pending</Status></Statuses>`
+- **Relational operators**: Use explicit elements for operators:
+  ```xml
+  <CreatedAt>
+    <GreaterThan>2023-01-01T00:00:00Z</GreaterThan>
+  </CreatedAt>
+  ```
+
+<br />
+
+### 12. Sorting
+
+- Use an `<OrderBy>` element in the request payload.
+- Accept a list of `<SortField>` elements.
+- **Ascending**: `<SortField name="createdAt" direction="ASC" />`
+- **Descending**: `<SortField name="createdAt" direction="DESC" />`
+- **Multiple fields**: Multiple `<SortField>` elements are applied in sequence.
+
+<br />
+
+### 13. Payload Conventions
+
+- **Namespaces**: Every element belonging to the API domain **MUST** be properly namespaced.
+- **Booleans**: Use `xs:boolean` (`true` / `false`).
+- **Timestamps**: All dates and times **MUST** be ISO 8601 in UTC (e.g., `2023-10-25T14:30:00Z`) using `xs:dateTime`.
+- **Nulls**: Omit optional elements if they are not being set. To explicitly clear an existing optional field, pass `xs:nil="true"` (e.g., `<MiddleName xsi:nil="true" />`).
+- **Server-generated fields**: Omit server-generated fields (`<Id>`, `<CreatedAt>`) from request payloads.
+
+<br />
+
+### 14. Request Format
+
+A standard SOAP HTTP request **MUST** follow this structure:
+
+```xml
+POST /api HTTP/1.1
+Host: api.example.com
+Content-Type: application/soap+xml; charset=utf-8
+Content-Length: nnn
+
+<?xml version="1.0"?>
+<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope">
+  <soap:Header>
+    <AuthHeader xmlns="http://api.example.com/v1">
+      <ApiKey>secret-key</ApiKey>
+    </AuthHeader>
+  </soap:Header>
+  <soap:Body>
+    <CreateUser xmlns="http://api.example.com/v1">
+      <User>
+        <Email>test@example.com</Email>
+      </User>
+    </CreateUser>
+  </soap:Body>
+</soap:Envelope>
+```
+
+<br />
+
+### 15. Response Format
+
+A successful SOAP HTTP response **MUST** follow this structure:
+
+```xml
+HTTP/1.1 200 OK
+Content-Type: application/soap+xml; charset=utf-8
+
+<?xml version="1.0"?>
+<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope">
+  <soap:Body>
+    <CreateUserResponse xmlns="http://api.example.com/v1">
+      <UserId>usr_12345</UserId>
+      <CreatedAt>2023-10-25T14:30:00Z</CreatedAt>
+    </CreateUserResponse>
+  </soap:Body>
+</soap:Envelope>
+```
+
+<br />
+
+### 16. Message Exchange Patterns
+
+- **Request-Response**: The standard pattern. Client sends a request, server sends a response. (e.g., `CreateUser`).
+- **One-Way**: Client sends a request, server sends an HTTP 202 Accepted with an empty SOAP body. Used for fire-and-forget operations (e.g., `LogEvent`). Defined in WSDL using `<wsdl:input>` without an `<wsdl:output>`.
+
+<br />
+
+### 17. Rate Limiting
+
+All public APIs **MUST** implement rate limiting based on IP or API key.
+
+- Responses **SHOULD** include HTTP headers: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `X-RateLimit-Reset`.
+- Exceeding the limit **MUST** return an HTTP `429 Too Many Requests` status code, accompanied by a standard SOAP Fault in the body.
+- The SOAP Fault `<ErrorCode>` **MUST** be `RATE_LIMIT_EXCEEDED` and include a `Retry-After` HTTP header.
+
+<br />
+
+### 18. API Documentation
+
+All APIs **MUST** be documented using the WSDL as the single source of truth.
+
+- The WSDL and associated XSDs **MUST** be publicly accessible at a standard URL (e.g., `/api?wsdl`).
+- Every operation and complex type **MUST** include `<xs:documentation>` tags with markdown descriptions.
+- Interactive documentation (e.g., Swagger UI for SOAP, Postman collections, or a generated HTML reference) **MUST** be automatically updated on deployment.
+- Provide a standard `CHANGELOG.md` for tracking breaking changes and deprecations.

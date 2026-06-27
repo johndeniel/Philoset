@@ -20,6 +20,7 @@ export default async function RootLayout({ children }) {
           navbar={navbar}
           pageMap={await getPageMap()}
           footer={footer}
+          copyPageButton={false}
         >
           {children}
         </Layout>

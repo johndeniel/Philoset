@@ -118,7 +118,7 @@ export default function HomePage() {
             <span className={styles.srOnly}> (opens in a new tab)</span>
           </a>
 
-          <Link className={`${styles.btn} ${styles.btnOutline}`} href="/backend">
+          <Link className={`${styles.btn} ${styles.btnOutline}`} href="/installation">
             Browse principles
             <svg
               width="15"
