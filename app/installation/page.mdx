@@ -1,0 +1,58 @@
+<Tabs items={['npm', 'pnpm', 'yarn', 'bun']}>
+  <Tab>
+    ```bash filename="terminal"
+    npm i philoset
+    ```
+  </Tab>
+  <Tab>
+    ```bash filename="terminal"
+    pnpm add philoset
+    ```
+  </Tab>
+  <Tab>
+    ```bash filename="terminal"
+    yarn add philoset
+    ```
+  </Tab>
+  <Tab>
+    ```bash filename="terminal"
+    bun add philoset
+    ```
+  </Tab>
+</Tabs>
+
+Then add your first philosophy document:
+
+```bash filename="terminal"
+npx philoset add backend
+```
+
+### Usage
+
+```bash
+npx philoset list                      # List available documents
+npx philoset add                       # Open the interactive picker
+npx philoset add --all                 # Add every available document
+npx philoset add backend               # Add a specific document
+npx philoset add backend --force       # Overwrite existing files
+npx philoset --help                    # Show available commands and options
+```
+
+### What is Philoset?
+
+Philoset distributes standalone Markdown documents covering programming philosophies, engineering principles, and development practices. After installation, use the CLI to add documents directly into your project:
+
+```bash filename="terminal"
+npx philoset add backend
+```
+
+This copies the `backend.md` philosophy document into `docs/philosophy/backend.md` in your project, ready to edit and adapt.
+
+### Commands
+
+| Command | Description |
+| --- | --- |
+| `philoset list` | List all available philosophy documents |
+| `philoset add [name]` | Add a document. Omit `name` to open the interactive picker. |
+| `philoset --version` | Print the installed version |
+| `philoset --help` | Show help for any command |

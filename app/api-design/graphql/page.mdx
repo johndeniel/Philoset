@@ -1,0 +1,204 @@
+### 1. Operations
+
+GraphQL APIs **MUST** use operations according to their intended semantics.
+
+| Operation      | Use Case |
+|----------------|----------|
+| **`Query`**    | Read data. Retrieve a resource or collection. Must not modify server state. |
+| **`Mutation`** | Create, update, or delete resources. Trigger actions or state changes. |
+| **`Subscription`** | Receive real-time updates via WebSockets or Server-Sent Events. |
+
+- Clients **MUST** explicitly specify the operation type (`query`, `mutation`, or `subscription`).
+- A single HTTP request **MUST** execute exactly one operation.
+
+<br />
+
+### 2. Naming Conventions
+
+- **Types**: PascalCase (e.g., `User`, `OrderItem`)
+- **Fields and Arguments**: camelCase (e.g., `userId`, `createdAt`)
+- **Enums**: 
+  - Type name in PascalCase
+  - Values in UPPER_SNAKE_CASE (e.g., `OrderStatus.PENDING`)
+- **Mutations**: Verb + Resource (e.g., `createUser`, `updateOrder`, `deletePost`)
+- **Input Types**: Suffix with `Input` (e.g., `CreateUserInput`)
+- **Payload Types**: Suffix with `Payload` (e.g., `CreateUserPayload`)
+
+<br />
+
+### 3. Schema Design
+
+- **Single Endpoint**: All operations served from `/graphql`.
+- **Strong Typing**: Define custom scalars (`DateTime`, `UUID`, `URL`, etc.) instead of overusing `String` or `JSON`.
+- **Relationships**: Prefer nested object fields over foreign key IDs.
+- **Nullability**: Prefer non-null fields (`String!`). Use nullable only when genuinely optional.
+- **Lists**: Prefer non-null lists of non-null items (`[User!]!`).
+
+<br />
+
+### 4. HTTP Transport
+
+- `200 OK` — GraphQL execution completed (success or errors in body)
+- `400 Bad Request` — Malformed JSON or invalid GraphQL syntax
+- `401 Unauthorized` — Authentication required
+- `403 Forbidden` — Insufficient permissions
+- `405 Method Not Allowed` — Only `POST` allowed (GET optional for introspection)
+- `429 Too Many Requests` — Rate limit exceeded
+- `500 Internal Server Error` — Unexpected server failure
+
+<br />
+
+### 5. Idempotency
+
+- `Query` operations are inherently idempotent.
+- For `Mutation` operations, use the `Idempotency-Key` header (UUID) to safely retry requests.
+  - Server caches the response for 24 hours.
+
+<br />
+
+### 6. Error Handling
+
+```json
+{
+  "errors": [
+    {
+      "message": "The input is invalid.",
+      "locations": [{ "line": 2, "column": 10 }],
+      "path": ["mutation", "createUser", "input", "email"],
+      "extensions": {
+        "code": "VALIDATION_FAILED",
+        "field": "email",
+        "traceId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+      }
+    }
+  ],
+  "data": null
+}
+```
+
+- Support partial success: return `data` for successful fields alongside `errors`.
+
+<br />
+
+### 7. Input Validation
+
+- Use `VALIDATION_FAILED` code for validation errors.
+- Include specific `field` in `extensions`.
+- Leverage GraphQL schema for type validation.
+- Always sanitize inputs server-side.
+
+<br />
+
+### 8. Schema Evolution
+
+- GraphQL is versionless — avoid URI versioning.
+- **Non-breaking**: Adding fields, types, or optional arguments.
+- Use `@deprecated(reason: "...")` directive for deprecations (maintain for ≥12 months).
+
+<br />
+
+### 9. Pagination
+
+Use **Relay-style cursor-based pagination**:
+
+```graphql
+type Query {
+  users(first: Int, after: String, last: Int, before: String): UserConnection!
+}
+
+type UserConnection {
+  edges: [UserEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int
+}
+```
+
+<br />
+
+### 10. Searching
+
+- Dedicated search field: `search(q: String, type: SearchableType)`
+
+- SHOULD be case-insensitive
+
+- Support basic boolean logic when backed by a capable search engine
+
+<br />
+
+### 11. Filtering
+
+- Use `where` input objects for filtering
+
+- Examples:
+
+  - Exact match: `status: ACTIVE`
+
+  - Multiple values: `statusIn: [ACTIVE, PENDING]`
+
+  - Operators: `createdAt: { gt: "2023-01-01T00:00:00Z" }`, `price: { lte: 100.00 }`
+
+<br />
+
+### 12. Sorting
+
+- Use `orderBy` with enums: `CREATED_AT_ASC`, `CREATED_AT_DESC`
+- Support multiple fields as a list.
+
+<br />
+
+### 13. Argument Conventions
+
+- `camelCase` for all arguments
+- Reserved: `first`, `after`, `last`, `before`, `where`, `orderBy`
+- Provide sensible defaults (e.g., `first: 20`)
+
+<br />
+
+### 14. Request Format
+
+```json
+{
+  "query": "mutation CreateUser($input: CreateUserInput!) { createUser(input: $input) { id } }",
+  "variables": {
+    "input": { "email": "test@example.com" }
+  },
+  "operationName": "CreateUser"
+}
+```
+
+- Always use variables.
+- `operationName` is recommended.
+
+<br />
+
+### 15. Response Format
+
+- `camelCase` keys
+- ISO 8601 UTC timestamps
+- Always return `data` and/or `errors`
+- Return `null` for missing optional fields
+
+<br />
+
+### 16. Introspection
+
+- Enabled in non-production environments.
+- Disabled or protected in production.
+- Disable field suggestions in production for security.
+
+<br />
+
+### 17. Rate Limiting
+
+- Base on **query complexity** and **depth**, not just request count.
+- Reject overly complex queries with `QUERY_TOO_COMPLEX`.
+
+<br />
+
+### 18. API Documentation
+
+- Schema (`.graphql` files) is the single source of truth.
+- Every type, field, and argument must have clear documentation using `""" """`.
+- Provide interactive tools (Apollo Explorer, GraphiQL, etc.).
+- Maintain `CHANGELOG.md` for schema changes.
+

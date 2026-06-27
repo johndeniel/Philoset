@@ -1,6 +1,5 @@
 export default {
   index: {
-    title: 'Overview',
     type: 'page',
     display: 'hidden',
     theme: {
@@ -9,9 +8,6 @@ export default {
       breadcrumb: false
     }
   },
-  backend: 'Backend',
-  frontend: 'Frontend',
-  rbac: 'RBAC',
-  database: 'Database',
-  ventra: 'Ventra'
+  'installation': 'Installation',
+  'api-design': 'API Design'
 }
