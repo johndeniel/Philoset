@@ -1,0 +1,73 @@
+### Quick Reference Table
+
+| Protocol / API | Primary Paradigm | Data Format | Transport Layer |
+| :--- | :--- | :--- | :--- |
+| **REST** | Request-Response | JSON, XML | HTTP |
+| **GraphQL** | Query-Based | JSON | HTTP |
+| **gRPC** | RPC / Streaming | Protobuf | HTTP/2 |
+| **WebSocket** | Real-Time Bi-directional | Text/Binary | TCP |
+| **Kafka** | Event Streaming | Custom | TCP |
+| **MQTT** | IoT / Pub-Sub | Binary | TCP |
+
+<br />
+
+### Request-Response APIs
+**Best for:** Standard client-server communication where the client requests data and waits for the server to respond.
+
+*   **REST (Representational State Transfer):** The industry standard for web APIs. It uses standard HTTP methods (GET, POST, PUT, DELETE) and is stateless. Easy to understand, cacheable, and highly scalable.
+*   **SOAP (Simple Object Access Protocol):** A highly structured, strict protocol using XML. It comes with built-in error handling and strict security standards (WS-Security), making it common in legacy enterprise systems and financial institutions.
+*   **GraphQL:** A query language for APIs developed by Meta. Instead of multiple endpoints, it uses a single endpoint where clients specify exactly what data they need, preventing over-fetching and under-fetching.
+*   **gRPC:** A modern, high-performance framework developed by Google. It uses HTTP/2 for transport and Protocol Buffers (Protobuf) for serializing structured data. Ideal for microservices communication.
+*   **RPC (Remote Procedure Call):** A broad concept where a client executes a procedure on a remote server as if it were local. 
+*   **JSON-RPC:** A lightweight RPC protocol that uses JSON for request and response payloads. It is simple and easy to implement.
+*   **XML-RPC:** The older predecessor to JSON-RPC, using XML for encoding. Largely deprecated in favor of JSON-based alternatives.
+*   **OData (Open Data Protocol):** An OASIS standard that builds on REST to create a standardized way for querying and updating data. It allows clients to filter, sort, and paginate data using URL parameters (e.g., `$filter`, `$select`).
+
+<br />
+
+### Real-Time APIs
+**Best for:** Applications requiring instant data updates, such as chat apps, live dashboards, and multiplayer games.
+
+*   **WebSocket:** A communication protocol providing full-duplex communication channels over a single TCP connection. Unlike HTTP, it keeps the connection open, allowing servers to push data to clients instantly.
+*   **Server-Sent Events (SSE):** A simpler alternative to WebSockets. It allows a server to push data to a client over a standard HTTP connection, but it is strictly one-way (server-to-client). Great for live news feeds or stock tickers.
+*   **RSocket:** A binary protocol designed for reactive programming. It supports backpressure (allowing clients to tell the server to slow down data transmission) and works over TCP, WebSocket, and Aeron.
+
+<br />
+
+### Event-Driven APIs
+**Best for:** Decoupled systems where actions trigger reactions automatically. The producer sends an event without waiting for a response.
+
+*   **Webhooks:** Lightweight, custom HTTP callbacks. When an event occurs in a system, it sends an HTTP POST request to a pre-registered URL of another application to notify it.
+*   **Kafka (Apache Kafka):** A distributed event streaming platform capable of handling trillions of events a day. It uses a publish-subscribe model and is heavily used for big data, log aggregation, and microservices decoupling.
+*   **MQTT (Message Queuing Telemetry Transport):** A lightweight publish-subscribe messaging protocol. Designed to minimize network bandwidth and device resource requirements.
+*   **AMQP (Advanced Message Queuing Protocol):** A robust, binary messaging protocol that ensures reliable message delivery, routing, and queuing. Popular in enterprise messaging systems like RabbitMQ.
+*   **AsyncAPI:** Not a protocol, but a specification (like OpenAPI for REST). It is used to document and define message-driven, asynchronous APIs.
+
+<br />
+
+### IoT (Internet of Things) APIs
+**Best for:** Connected devices with limited bandwidth, battery life, or processing power.
+
+*   **MQTT:** The undisputed king of IoT messaging. Its "Quality of Service" (QoS) levels ensure message delivery even on unstable networks, making it perfect for sensors and smart devices.
+*   **CoAP (Constrained Application Protocol):** A specialized web transfer protocol for use with constrained nodes and networks. It is essentially a lightweight version of REST designed for IoT, using UDP instead of TCP.
+*   **AMQP:** Used in IoT when robust, enterprise-grade messaging is required, such as connecting heavy industrial IoT gateways to backend systems.
+
+<br />
+
+### Enterprise APIs
+**Best for:** Large-scale, complex environments requiring strict contracts, security, and cross-language interoperability.
+
+*   **SOAP:** Still heavily used in enterprise environments (like banking and telecom) due to its strict contract (WSDL), built-in WS-Security, and ACID compliance.
+*   **OData:** Favored by large enterprise software (like Microsoft's ecosystem) for exposing massive relational databases over the web in a standardized, queryable way.
+*   **gRPC:** Used to connect internal microservices across different languages efficiently, utilizing strict schema definitions (Protobuf).
+*   **Apache Thrift:** Originally developed at Facebook, this framework allows scalable cross-language services development. It abstracts away the networking code, allowing developers to focus on business logic.
+
+<br />
+
+### High-Performance APIs
+**Best for:** Systems where microsecond latency, high throughput, and low resource consumption are critical.
+
+*   **gRPC:** Uses HTTP/2 (allowing multiplexing multiple requests over a single connection) and binary Protobuf payloads, making it significantly faster than JSON-based REST.
+*   **RSocket:** Designed for high-performance, reactive systems. Its support for backpressure prevents fast producers from overwhelming slow consumers.
+*   **Apache Thrift:** Offers extremely fast binary serialization. It avoids the overhead of text-based formats (JSON/XML) entirely.
+*   **Kafka:** Engineered for high-throughput, low-latency event streaming. It can process millions of messages per second with millisecond-level latency.
