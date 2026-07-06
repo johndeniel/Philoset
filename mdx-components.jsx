@@ -8,7 +8,6 @@ const docsComponents = getDocsMDXComponents()
 export function useMDXComponents(components) {
   return {
     ...docsComponents,
-    Steps,
     Tabs,
     Tab,
     ...components
