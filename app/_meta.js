@@ -9,5 +9,5 @@ export default {
     }
   },
   'installation': 'Installation',
-  'api-design': 'API Design'
+  'api-architecture': 'API Architecture'
 }
